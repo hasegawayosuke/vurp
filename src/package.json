@@ -1,0 +1,20 @@
+{
+  "name": "vurp",
+  "version": "1.0.0",
+  "description": "Vulnerable Reverse Proxy",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^2.9.0",
+    "connect": "^3.5.0",
+    "cookie": "^0.3.1",
+    "global-tunnel": "^1.2.0",
+    "http-proxy": "^1.16.2",
+    "replacestream": "^4.0.2",
+    "set-cookie-parser": "^2.0.0"
+  }
+}
