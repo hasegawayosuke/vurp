@@ -1,22 +1,22 @@
 "use strict";
 
 const config = {
-	hostname : "example.jp",		
-	upstream : "http://target.example.com",
-	listen : {
-		port : 80,
-//		hostname : "0.0.0.0"	// if hostname is specified, listen only that address.
-	},
-	overrideHost : "utf-8.jp",
-	vulnerabilities : [
-		{
-			url : "*",
-			method : "*",
-			replaceResponseHeaders : {"X-XSS-Protection" : "0", "X-New-Header" : function(){ return "" + ~~(new Date());} },
-			stripResponseHeaders : [ "X-Content-Type-Options", "X-Frame-Options" ],
-			removeHttpOnlyFlag : true,
-			removeSecureFlag : true,
-		},
+    hostname : "example.jp",        
+    upstream : "http://target.example.com",
+    listen : {
+        port : 80,
+//      hostname : "0.0.0.0"    // if hostname is specified, listen only that address.
+    },
+    overrideHost : "utf-8.jp",
+    vulnerabilities : [
+        {
+            url : "*",
+            method : "*",
+            replaceResponseHeaders : {"X-XSS-Protection" : "0", "X-New-Header" : function(){ return "" + ~~(new Date());} },
+            stripResponseHeaders : [ "X-Content-Type-Options", "X-Frame-Options" ],
+            removeHttpOnlyFlag : true,
+            removeSecureFlag : true,
+        },
         {
             url : "^/foo?q",    
             method : "get",
@@ -41,23 +41,23 @@ const config = {
                 }
             }
         },
-		{
-			url : /^\/bar\?/,
-			method : "get",
-			osCommandInjection : {
-				source : "url", // or body
-				pattern : /^\/bar\?q=[^&]*(?:%7C|%7c|\|)([^&]+)/,
-				/*
-				command : (match) => {
-					if (match && match[1]) {
-						let program = decodeURIComponent(match[1]);
-						require("child_process").exec(program);
-					}
-				}
-				*/
-			}
-		}
-	]
+        {
+            url : /^\/bar\?/,
+            method : "get",
+            osCommandInjection : {
+                source : "url", // or body
+                pattern : /^\/bar\?q=[^&]*(?:%7C|%7c|\|)([^&]+)/,
+                /*
+                command : (match) => {
+                    if (match && match[1]) {
+                        let program = decodeURIComponent(match[1]);
+                        require("child_process").exec(program);
+                    }
+                }
+                */
+            }
+        }
+    ]
 };
 
 exports.config = config;
