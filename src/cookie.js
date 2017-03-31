@@ -124,42 +124,6 @@ function regenerateSession(cookieHeaderString, parsedSetCookie, cookieName, rege
     return result;
 }
 
-
-/*
-function revertCookie(cookieString, targetName){
-    let cookies = reqCookie.parse(cookies);
-    let altFromBrowser = cookies[targetName];
-    let result = {};
-    if (altFromBrowser !== undefined) {
-        result.alternate = altFromBrowser;
-        if (_cookieStore[targetName] !== undefined) {
-            let original = _cookieStore[targetName][altFromBrowser];
-            if (original !== undefined) {
-                result.original = original;
-                cookies[targetName] = original;
-            }
-        }
-    }
-    result.text = reqCookie.serialize(cookies);
-    return result;
-}
-
-function regenerateCookie(cookies, targetName, regenerator){
-    if (!Array.isArray(cookies)) cookies = [cookies];
-    cookies.forEach(cookie => {
-        if (cookie.name === targetName) {
-            if (_cookieStore[targetName] === undefined) {
-                _cookieStore[targetName] = {};
-            }
-            let original = cookie.value;
-            let alternate = regenerator();
-            _cookieStore[targetName][alternate] = original;
-        }
-    });
-    return cookies;
-}
-*/
-
 exports.parseSetCookie = resCookie.parse;
 exports.parseCookie = reqCookie.parse;
 exports.serializeSetCookie = serializeSetCookie;
@@ -167,8 +131,3 @@ exports.serializeCookie = reqCookie.serialize;
 exports.revertSession = revertSession;
 exports.regenerateSession = regenerateSession;
 
-/*
-exports.revert = revertCookie;
-exports.regenerate = regenerateCookie;
-
-*/
