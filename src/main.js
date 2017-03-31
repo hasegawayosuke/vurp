@@ -47,72 +47,6 @@ const defaultOsCommandInjectionHandler = function(match){
     }
 };
 
-/*
-// TODO: preparePattern‚ÅÅ“K‰»‚·‚é
-function compareString(s, pattern){
-    s = s.toLowerCase();
-    if (pattern instanceof "RegExp") {
-        return pattern.test(s);
-    } else if (typeof pattern === "string") {
-        let fm = pattern.charAt(0) === "^";
-        let bm = pattern.charAt(pattern.length -1) === "$";
-        pattern = pattern.toLowerCase();
-        if (!fm && !bm) {       // partial match
-            return s.indexOf(pattern) >= 0;
-        } else if (!fm & bm) {  // backword match
-            pattern = pattern.substr(0, pattern.length - 1);
-            return s.substr(s.length - pattern.length) === pattern;
-        } else if (fm & !bm) {  // forward match
-            pattern = pattern.substr(1);
-            return s.indexOf(pattern) === 0;
-        } else {                // exact match
-            pattern = pattern.substr(1, pattern.length);
-            return s === pattern;
-        }
-    } else {
-        return false;
-    }
-}
-
-function replaceHeaders(reqOrRes, originalHeadersObject, replacingHeaders, removingHeaders){
-    if (originalHeadersObject !== undefined) {
-        Object.keys(originalHeadersObject).forEach(originalHeaderName => {
-            let originalHeaderValue = originalHeadersObject[originalHeaderName];
-            replacingHeaders.forEach(replacingHeader => {
-                let doReplace = compareString(originalHeaderName, replacingHeadr.name);
-                //if (!doReplace) doReplace = compareString(originalHeaderValue, replacingHeadr.value);
-                if (doReplace) {
-                    if (typeof replacingHeadr.replacer === "string") {
-                        originalHeadersObject[originalHeaderName] = replacingHeadr.replacer;
-                    } else if (typeof replacingHeadr.replacer === "function") {
-                        originalHeadersObject[originalHeaderName] = replacingHeadr.replacer(originalHeaderName, originalHeaderValue);
-                    }
-                }
-            });
-            removingHeaders.forEach(removingHeader => {
-                let doRemove = compareString(originalHeaderName, removingHeader);
-                if (doRemove) {
-                    delete originalHeadersObject[originalHeaderName];
-                }
-            });
-        });
-    }
-    replacingHeaders.forEach(replacingHeader => {
-        if (typeof replacingHeader.replacer === "string") {
-            reqOrRes.setHeader(
-
-                    if (typeof replacingHeadr.replacer === "string") {
-                        originalHeadersObject[originalHeaderName] = replacingHeadr.replacer;
-                    } else if (typeof replacingHeadr.replacer === "function") {
-                        originalHeadersObject[originalHeaderName] = replacingHeadr.replacer(originalHeaderName, originalHeaderValue);
-                    }
-    });
-    removingHeaders.forEach(removingHeader => {
-        reqOrRes.removeHeader(originalHeaderName);
-    });
-}
-*/
-
 app.use(function(req, res) {
     console.log( `${(new Date()).toLocaleString()}: ${req.method} ${req.url}` );
     if (config.hostname && req.headers.host !== config.hostname) {
@@ -194,22 +128,6 @@ app.use(function(req, res) {
                                     if (vuln.removeSecureFlag) delete cookie.secure;
                                 });
                                 headers[storedHeaderOrg] = cookieUtil.serializeSetCookie(cookies);
-
-                                /*
-                                if (typeof headers[storedHeaderOrg] === "string") {
-                                    let s = headers[storedHeaderOrg];
-                                    if (vuln.removeHttpOnlyFlag) s = s.replace(/;\s*httponly\s*(;|$)/gi,";");
-                                    if (vuln.removeSecureFlag)   s = s.replace(/;\s*secure\s*(;|$)/gi,";");
-                                    headers[storedHeaderOrg] = s;
-                                } else if (headers[storedHeaderOrg] instanceof Array) {
-                                    headers[storedHeaderOrg].forEach((value, index) => {
-                                        let s = headers[storedHeaderOrg][index];
-                                        if (vuln.removeHttpOnlyFlag) s = s.replace(/;\s*httponly\s*(;|$)/gi,";");
-                                        if (vuln.removeSecureFlag)   s = s.replace(/;\s*secure\s*(;|$)/gi,";");
-                                        headers[storedHeaderOrg][index] = s;
-                                    });
-                                }
-                                */
                             }
                         });
                     });
@@ -240,22 +158,6 @@ app.use(function(req, res) {
                     });
                     res.removeHeader("Set-Cookie");
                     res.setHeader("Set-Cookie", cookieUtil.serializeSetCookie(cookies));
-                    /*
-                    if (typeof v === "string") {
-                        if (vuln.removeHttpOnlyFlag) v = v.replace(/;\s*httponly\s*(;|$)/gi,";");
-                        if (vuln.removeSecureFlag) v = v.replace(/;\s*secure\s*(;|$)/gi,";");
-                        res.removeHeader("Set-Cookie");
-                        res.setHeader("Set-Cookie", v);
-                    } else if (v instanceof Array) {
-                        v.forEach((value, index) => {
-                            if (vuln.removeHttpOnlyFlag) value = value.replace(/;\s*httponly\s*(;|$)/gi,";");
-                            if (vuln.removeSecureFlag) value = value.replace(/;\s*secure\s*(;|$)/gi,";");
-                            v[index] = value;
-                        });
-                        res.removeHeader("Set-Cookie");
-                        res.setHeader("Set-Cookie", v);
-                    }
-                    */
                 });
                 _writeHead.apply(res, arguments);
             };
