@@ -57,25 +57,6 @@ app.use(function(req, res) {
     let vulns = config.vulnerabilities.filter( (vuln,index) => vuln.comp(req, vuln) );
 
     if (vulns.length) {
-        if (vulns.replaceBody) { // TODO
-            let resReplace = replaceStream('script', 'SCRIPT');
-            let _write = res.write;
-            let _end = res.end;
-            resReplace.on("data", function(buf){
-                _write.call(res, buf);
-            });
-            resReplace.on("end", function(){
-                _end.call(res);
-            });
-
-            res.write = function(data){
-                resReplace.write(data);
-            };
-            res.end = function(){
-                resReplace.end();
-            };
-        }
-
         vulns.forEach(vuln => {
             if (vuln.replaceHtml) {
                 let resReplace = replaceStream(vuln.replaceHtml.pattern, vuln.replaceHtml.replacement);
