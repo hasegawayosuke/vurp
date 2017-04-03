@@ -1,6 +1,6 @@
 # Vurp - Vulnerable Reverse Proxy
 
-Vurpはリバースプロキシとして使用することで、任意のサイトを脆弱にすることができるWAF(Web Applicatin Fireball)です。
+Vurpはリバースプロキシとして使用することで、任意のサイトを脆弱にすることができるWAF(Web Application Fireball)です。
 
 ## 脆弱性
 
