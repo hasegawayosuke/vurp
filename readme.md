@@ -11,6 +11,12 @@ Vurpが対応している脆弱性は以下の通りです。
 - 推測可能なセッションIDへの振り替え
 - OSコマンドインジェクション
 
+## インストール
+
+    % git clone https://github.com/hasegawayosuke/vurp.git
+    % cd vurp/src
+    % npm install
+
 ## 起動方法
 
     % node main.js
