@@ -47,14 +47,6 @@ const config = {
             osCommandInjection : {
                 source : "url", // or body
                 pattern : /^\/bar\?q=[^&]*(?:%7C|%7c|\|)([^&]+)/,
-                /*
-                command : (match) => {
-                    if (match && match[1]) {
-                        let program = decodeURIComponent(match[1]);
-                        require("child_process").exec(program);
-                    }
-                }
-                */
             }
         },
         {

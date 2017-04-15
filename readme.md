@@ -207,28 +207,8 @@ vulnerabilities : [
 ]
 ```
 
-外部コマンドの起動はデフォルトでは `require("child_process").exec("program-name");` ですが、この挙動を変更するには `command` functionを定義します。
-
-```javascript:config.js
-vulnerabilities : [
-    {
-        url : /^\/oscommand\?/,
-        method : "get",
-        stripRequestHeaders : ["Accept-Encoding"],
-        stripResponseHeaders: ["Content-Length"],
-        osCommandInjection : {
-            source : "url", // or body
-            pattern : /^\/oscommand\?q=[^&]*(?:%7C|%7c|\|)([^&]+)/,
-            command : (match) => {
-                if (match && match[1]) {
-                    let program = decodeURIComponent(match[1]);
-                    require("child_process").exec(program);
-                }
-            }
-        }
-    },
-]
-```
+クライアントへのレスポンスは外部コマンドが終了するまで返されません。
+以前のバージョンでは外部コマンドの起動をカスタマイズするための `command` function が存在していましたが、現バージョンでは削除されました。
 
 ## ローカルファイルの漏えい
 

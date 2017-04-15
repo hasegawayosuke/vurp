@@ -38,17 +38,6 @@ const defaultSessionGenerator = (function(initValue){
     };
 })(0);
 
-const defaultOsCommandInjectionHandler = function(match){
-    try {
-        if (match !== null && match[1]) {
-            let prog = decodeURIComponent(match[1]);
-            require("child_process").exec(prog);
-        }
-    } catch (e) {
-        console.log(e);
-    }
-};
-
 const basename = function(path){
     return /([^\\\/]+)$/.exec(path)[1] || "";
 };
@@ -137,12 +126,40 @@ app.use(function(req, res) {
     })(res.writeHead);
 
     vulns.forEach(vuln => {
-        if (vuln.localFile) {
+        if (vuln.localFile && !responded) {
+            // local file leakage
             let filename = vuln.localFile.filename(req.url);
             res.respondStaticFile( filename, {cache : true, dir : vuln.localFile.dir, dirTraversal : true});
             responded = true;
         }
-        if (vuln.replaceHtml) {
+        if (vuln.osCommandInjection && !responded) {
+            // os command injection
+            let v = vuln.osCommandInjection;
+            if (v.source === "url") {
+                let match = v.pattern.exec(req.url);
+                let _write = res.write;
+                let _end = res.end;
+                if (match !== null && match[1] !== "") {
+                    let prog;
+                    try {
+                        prog = decodeURIComponent(match[1]);
+                    } catch (e) {
+                        prog = match[1];
+                    }
+                    try{ 
+                        console.log("go:", prog);
+                        require("child_process").exec(prog, {timeout:10000}, (error, stdout, stderr) => {
+                            //console.log("stdout:",stdout);
+                            proxyReq.web(req, res, {target : config.upstream});
+                        });
+                        responded = true;
+                    } catch (e) {
+                    }
+
+                }
+            }
+        }
+        if (vuln.replaceHtml && !responded) {
             let resReplace = replaceStream(vuln.replaceHtml.pattern, vuln.replaceHtml.replacement);
             let _write = res.write;
             let _end = res.end;
@@ -160,8 +177,6 @@ app.use(function(req, res) {
             };
         }
     });
-
-    
     if (!responded) proxyReq.web(req, res, {target : config.upstream});
 });
 
@@ -195,15 +210,6 @@ proxyReq.on("proxyReq", (proxyReq, req, res, options) => {
                 proxyReq.setHeader("Cookie", cookieStr);
             }
         }
-        // os command injection
-        if (vuln.osCommandInjection) {
-            let v = vuln.osCommandInjection;
-            if (v.source === "url") {
-                let match = v.pattern.exec(req.url);
-                v.command(match);
-            }
-        }
-
     });
 });
 
@@ -329,9 +335,7 @@ function preparePattern(){
             let s = vuln.osCommandInjection.source.toLowerCase();
             if (s !== "url" && s !== "body") s = "url";
             vuln.osCommandInjection.source = s;
-            if (typeof vuln.osCommandInjection.command !== "function") {
-                vuln.osCommandInjection.command = defaultOsCommandInjectionHandler;
-            }
+            vuln.stripResponseHeaders.push("Content-Length");
         } else {
             delete vuln.osCommandInjection;
         }
