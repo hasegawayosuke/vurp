@@ -1,13 +1,15 @@
 "use strict";
 
-const http = require("http"),
+const 
+    http = require("http"),
     https = require("https"),
     url = require("url"),
     connect = require("connect"),
     httpProxy = require("http-proxy"),
     cookieUtil = require("./cookie"),
     replaceStream = require("replacestream"),
-    program = require("commander");
+    program = require("commander"),
+    httpUtil = require("./http-util");
 
 let config;
 
@@ -47,6 +49,15 @@ const defaultOsCommandInjectionHandler = function(match){
     }
 };
 
+const basename = function(path){
+    return /([^\\\/]+)$/.exec(path)[1] || "";
+};
+
+const defaultLocalFile = function(urlString){
+    let filename = url.parse(urlString).pathname;
+    return basename(filename);
+};
+
 app.use(function(req, res) {
     console.log( `${(new Date()).toLocaleString()}: ${req.method} ${req.url}` );
     if (config.hostname && req.headers.host !== config.hostname) {
@@ -56,95 +67,102 @@ app.use(function(req, res) {
     }
     let vulns = config.vulnerabilities.filter( (vuln,index) => vuln.comp(req, vuln) );
 
-    if (vulns.length) {
-        vulns.forEach(vuln => {
-            if (vuln.replaceHtml) {
-                let resReplace = replaceStream(vuln.replaceHtml.pattern, vuln.replaceHtml.replacement);
-                let _write = res.write;
-                let _end = res.end;
-                resReplace.on("data", function(buf){
-                    _write.call(res, buf);
-                });
-                resReplace.on("end", function(){
-                    _end.call(res);
-                });
-                res.write = function(data){
-                    resReplace.write(data);
-                };
-                res.end = function(){
-                    resReplace.end();
-                };
+    let responded = false;
+
+    res.writeHead = (function(_writeHead){
+        return function(){
+            let headers;
+            if (arguments[2] !== undefined) {
+                headers = arguments[2];
+            } else if (typeof arguments[1] === "object") {
+                headers = arguments[1];
             }
-        });
 
-        res.writeHead = (function(_writeHead){
-            return function(){
-                let headers;
-                if (arguments[2] !== undefined) {
-                    headers = arguments[2];
-                } else if (typeof arguments[1] === "object") {
-                    headers = arguments[1];
-                }
-
-                if (headers) {
-                    Object.keys(headers).forEach(storedHeaderOrg => {
-                        let storedHeaderLower = storedHeaderOrg.toLowerCase();
-                        vulns.forEach(vuln => {
-                            // strip response header
-                            if (vuln.stripResponseHeaders.indexOf(storedHeaderLower) >= 0) {
-                                delete headers[storedHeaderOrg];
-                            }
-                            // replace response header
-                            let replacement = vuln.replaceResponseHeaders[storedHeaderLower];
-                            if (typeof replacement === "function") {
-                                headers[storedHeaderOrg] = replacement(storedHeaderOrg, headers[storedHeaderOrg], {req:req, res:res});
-                            } else if (typeof replacement === "string" || Array.isArray(replacement)) {
-                                headers[storedHeaderOrg] = replacement;
-                            }
-                            // remove httponly, secure from cookie
-                            if ((vuln.removeHttpOnlyFlag ||vuln.removeSecureFlag) && storedHeaderLower === "set-cookie") {
-                                let cookies = cookieUtil.parseSetCookie(headers[storedHeaderOrg]);
-                                cookies.forEach( cookie => {
-                                    if (vuln.removeHttpOnlyFlag) delete cookie.httpOnly;
-                                    if (vuln.removeSecureFlag) delete cookie.secure;
-                                });
-                                headers[storedHeaderOrg] = cookieUtil.serializeSetCookie(cookies);
-                            }
-                        });
-                    });
-                }
-
-                vulns.forEach(vuln => {
-                    // strip response header
-                    vuln.stripResponseHeaders.forEach(stripingHeader => res.removeHeader(stripingHeader));
-
-                    // replace response header
-                    Object.keys(vuln.replaceResponseHeaders).forEach(replacingHeader => {
-                        let replacement = vuln.replaceResponseHeaders[replacingHeader];
-                        let v = res.getHeader(replacingHeader);
+            if (headers) {
+                Object.keys(headers).forEach(storedHeaderOrg => {
+                    let storedHeaderLower = storedHeaderOrg.toLowerCase();
+                    vulns.forEach(vuln => {
+                        // strip response header
+                        if (vuln.stripResponseHeaders.indexOf(storedHeaderLower) >= 0) {
+                            delete headers[storedHeaderOrg];
+                        }
+                        // replace response header
+                        let replacement = vuln.replaceResponseHeaders[storedHeaderLower];
                         if (typeof replacement === "function") {
-                            res.removeHeader(replacingHeader);
-                            res.setHeader(replacingHeader, replacement(replacingHeader, v, {req:req, res:res}));
+                            headers[storedHeaderOrg] = replacement(storedHeaderOrg, headers[storedHeaderOrg], {req:req, res:res});
                         } else if (typeof replacement === "string" || Array.isArray(replacement)) {
-                            res.removeHeader(replacingHeader);
-                            res.setHeader(replacingHeader, replacement);
+                            headers[storedHeaderOrg] = replacement;
+                        }
+                        // remove httponly, secure from cookie
+                        if ((vuln.removeHttpOnlyFlag ||vuln.removeSecureFlag) && storedHeaderLower === "set-cookie") {
+                            let cookies = cookieUtil.parseSetCookie(headers[storedHeaderOrg]);
+                            cookies.forEach( cookie => {
+                                if (vuln.removeHttpOnlyFlag) delete cookie.httpOnly;
+                                if (vuln.removeSecureFlag) delete cookie.secure;
+                            });
+                            headers[storedHeaderOrg] = cookieUtil.serializeSetCookie(cookies);
                         }
                     });
-                    // remove httponly, secure from cookie
-                    let v = res.getHeader("Set-Cookie");
-                    let cookies = cookieUtil.parseSetCookie(res.getHeader("Set-Cookie"));
-                    cookies.forEach( cookie => {
-                        if (vuln.removeHttpOnlyFlag) delete cookie.httpOnly;
-                        if (vuln.removeSecureFlag) delete cookie.secure;
-                    });
-                    res.removeHeader("Set-Cookie");
-                    res.setHeader("Set-Cookie", cookieUtil.serializeSetCookie(cookies));
                 });
-                _writeHead.apply(res, arguments);
+            }
+
+            vulns.forEach(vuln => {
+                // strip response header
+                vuln.stripResponseHeaders.forEach(stripingHeader => res.removeHeader(stripingHeader));
+
+                // replace response header
+                Object.keys(vuln.replaceResponseHeaders).forEach(replacingHeader => {
+                    let replacement = vuln.replaceResponseHeaders[replacingHeader];
+                    let v = res.getHeader(replacingHeader);
+                    if (typeof replacement === "function") {
+                        res.removeHeader(replacingHeader);
+                        res.setHeader(replacingHeader, replacement(replacingHeader, v, {req:req, res:res}));
+                    } else if (typeof replacement === "string" || Array.isArray(replacement)) {
+                        res.removeHeader(replacingHeader);
+                        res.setHeader(replacingHeader, replacement);
+                    }
+                });
+                // remove httponly, secure from cookie
+                let v = res.getHeader("Set-Cookie");
+                let cookies = cookieUtil.parseSetCookie(res.getHeader("Set-Cookie"));
+                cookies.forEach( cookie => {
+                    if (vuln.removeHttpOnlyFlag) delete cookie.httpOnly;
+                    if (vuln.removeSecureFlag) delete cookie.secure;
+                });
+                res.removeHeader("Set-Cookie");
+                res.setHeader("Set-Cookie", cookieUtil.serializeSetCookie(cookies));
+            });
+            _writeHead.apply(res, arguments);
+        };
+    })(res.writeHead);
+
+    vulns.forEach(vuln => {
+        if (vuln.localFile) {
+            let filename = vuln.localFile.filename(req.url);
+            res.respondStaticFile( filename, {cache : true, dir : vuln.localFile.dir, dirTraversal : true});
+            responded = true;
+        }
+        if (vuln.replaceHtml) {
+            let resReplace = replaceStream(vuln.replaceHtml.pattern, vuln.replaceHtml.replacement);
+            let _write = res.write;
+            let _end = res.end;
+            resReplace.on("data", function(buf){
+                _write.call(res, buf);
+            });
+            resReplace.on("end", function(){
+                _end.call(res);
+            });
+            res.write = function(data){
+                resReplace.write(data);
             };
-        })(res.writeHead);
-    }
-    proxyReq.web(req, res, {target : config.upstream});
+            res.end = function(){
+                resReplace.end();
+            };
+        }
+    });
+
+    
+    if (!responded) proxyReq.web(req, res, {target : config.upstream});
 });
 
 
@@ -185,6 +203,7 @@ proxyReq.on("proxyReq", (proxyReq, req, res, options) => {
                 v.command(match);
             }
         }
+
     });
 });
 
@@ -315,6 +334,22 @@ function preparePattern(){
             }
         } else {
             delete vuln.osCommandInjection;
+        }
+
+        if (typeof vuln.localFile === "object") {
+            if (typeof vuln.localFile.dir !== "string") {
+                vuln.localFile.dir = __dirname;
+            }
+            if (typeof vuln.localFile.filename === "string") {
+                vuln.localFile._filename = vuln.localFile.filename;
+                vuln.localFile.filename = function(){
+                    return vuln.localFile._filename;
+                };
+            } else if (typeof vuln.localFile.filename !== "function") {
+                vuln.localFile.filename = defaultLocalFile;
+            }
+        } else {
+            delete vuln.localFile;
         }
     });
 }

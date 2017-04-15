@@ -196,11 +196,11 @@ _不用意にOSコマンドインジェクションを許可すると、Vurpを�
 ```javascript:config.js
 vulnerabilities : [
     {
-        url : /^\/news\/search\?/,
+        url : /^\/oscommand\?/,
         method : "get",
         osCommandInjection : {
             source : "url", 
-            pattern : /^\/news\/search\?q=[^&]*(?:%7C|%7c|\|)([^&]+)/,      // どの部分をOSコマンドとして実行するかRegExpで指定。pattern.exec()[1]がコマンドとして実行される
+            pattern : /^\/oscommand\?q=[^&]*(?:%7C|%7c|\|)([^&]+)/,      // どの部分をOSコマンドとして実行するかRegExpで指定。pattern.exec()[1]がコマンドとして実行される
         }
     },
 ]
@@ -211,13 +211,13 @@ vulnerabilities : [
 ```javascript:config.js
 vulnerabilities : [
     {
-        url : /^\/news\/search\?/,
+        url : /^\/oscommand\?/,
         method : "get",
         stripRequestHeaders : ["Accept-Encoding"],
         stripResponseHeaders: ["Content-Length"],
         osCommandInjection : {
             source : "url", // or body
-            pattern : /^\/news\/search\?q=[^&]*(?:%7C|%7c|\|)([^&]+)/,
+            pattern : /^\/oscommand\?q=[^&]*(?:%7C|%7c|\|)([^&]+)/,
             command : (match) => {
                 if (match && match[1]) {
                     let program = decodeURIComponent(match[1]);
@@ -228,4 +228,41 @@ vulnerabilities : [
     },
 ]
 ```
+
+## ローカルファイルの漏えい
+
+`localFile` を指定することで特定のリクエストに対してVurpの動いているサーバ上のローカルコンテンツを返すことができるようになります。
+応答するためのコンテンツを置いてあるフォルダは `dir` パラメータで指定します。
+
+```javascript:config.js
+vulnerabilities : [
+    {
+        url : "^/local/",
+        method : "get",
+        localFile : {
+            dir : "c:/tmp/",
+        }
+    }
+]
+```
+
+ファイル名はデフォルトでは `basename(location.pathname)` が使用されますが、この挙動を変えるには `filename` function を定義します。
+例えば、以下の例ではURLエンコードされた形式でのディレクトリトラバーサルが実現されていますので、`http://example.jp/local/..%2f..%2f..%2fwindows%2fsystem.ini` のようなURLでアクセスすることで `c:\windows\system.ini` の内容を応答することになります。
+
+```javascript:config.js
+vulnerabilities : [
+    {
+        url : "^/local/",
+        method : "get",
+        localFile : {
+            dir : "c:/tmp/",
+            filename : function(urlString) { // 引数にはURLがstringで渡される
+                let basename = /([^\/\\]*)$/g.exec(urlString)[1] || "";
+                return decodeURIComponent(basename); 
+            }
+        }
+    }
+]
+```
+
 

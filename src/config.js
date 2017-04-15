@@ -56,7 +56,18 @@ const config = {
                 }
                 */
             }
-        }
+        },
+        {
+            url : "^/local/",
+            method : "get",
+            localFile : {
+                dir : "c:/tmp/",
+                filename : function(url){
+                    let basename = /([^\/\\]*)$/g.exec(url)[1] || "";
+                    return decodeURIComponent(basename); // dir traversal with URL encoding
+                }, // string of function(url), default: basename of url
+            },
+        },
     ]
 };
 
